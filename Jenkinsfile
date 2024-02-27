@@ -62,7 +62,7 @@ pipeline {
     post {
         success {
             // Trigger downstream job
-            build job: 'QA/Content Services QA/Staging/API Postman Tests/main', wait: false
+            build job: 'QA/Content Services QA/Staging/API Postman Tests/*', wait: false
         }
     }
 }
