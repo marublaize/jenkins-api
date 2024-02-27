@@ -23,6 +23,7 @@ pipeline {
             script: 'git rev-parse --short=8 ${GIT_COMMIT}',
             returnStdout: true
         ).trim()
+        KUBECONFIG_CREDENTIAL = credentials('kubeconfig')
     }
 
     stages {
@@ -95,6 +96,7 @@ pipeline {
                 }
             }
         }
+
         stage('Deploy') {
             when {
                 not {
@@ -105,7 +107,13 @@ pipeline {
                 script {
                     try {
                         container('maven') {
+                            // Install kubectl
                             sh 'apt update && apt install -y kubernetes-client'
+
+                            // Set KUBECONFIG environment variable
+                            sh 'export KUBECONFIG=$KUBECONFIG_FILE'
+
+                            // Apply the deployment
                             sh 'kubectl apply -f deployment.yaml'
                         }
                     } catch (Exception e) {
@@ -114,7 +122,7 @@ pipeline {
                 }
             }
         }
-    }
+
 
     // post {
     //     success {
