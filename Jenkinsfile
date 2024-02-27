@@ -105,7 +105,7 @@ pipeline {
                 script {
                     try {
                         container('maven') {
-                            sh 'apt update && apt install -y kubectl'
+                            sh 'apt update && apt install -y kubernetes-client'
                             sh 'kubectl apply -f deployment.yaml'
                         }
                     } catch (Exception e) {
