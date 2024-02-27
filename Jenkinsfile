@@ -1,7 +1,6 @@
 pipeline {
     agent {
         kubernetes {
-            label 'my-kubernetes-agent'
             defaultContainer 'jnlp'
             yaml """
                 apiVersion: v1
@@ -24,21 +23,21 @@ pipeline {
                 }
             }
         }
-        // stage('Test') {
-        //     steps {
-        //         container('maven') {
-        //             // sh 'mvn test'
-        //             exit 0
-        //         }
-        //     }
-        // }
-        // stage('Deploy') {
-        //     steps {
-        //         container('maven') {
-        //             // sh 'kubectl apply -f deployment.yaml'
-        //             exit 0
-        //         }
-        //     }
-        // }
+        stage('Test') {
+            steps {
+                container('maven') {
+                    // sh 'mvn test'
+                    echo 'Test'
+                }
+            }
+        }
+        stage('Deploy') {
+            steps {
+                container('maven') {
+                    // sh 'kubectl apply -f deployment.yaml'
+                    echo 'Deploy'
+                }
+            }
+        }
     }
 }
