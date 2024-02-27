@@ -12,6 +12,11 @@ pipeline {
                     command:
                     - cat
                     tty: true
+                  - name: kubectl
+                    image: bitnami/kubectl:latest
+                    command:
+                    - cat
+                    tty: true
             """
         }
     }
@@ -31,7 +36,7 @@ pipeline {
             steps {
                 script {
                     // Set default values
-                    env.DEPLOY = "1"
+                    env.DEPLOY = "0"
                     def envMap = [:]
 
                     // Production only has tagged commits, not ending in -rc
@@ -97,12 +102,14 @@ pipeline {
         }
         stage('Deploy') {
             when {
-               environment name: 'DEPLOY', value: '1'
+                not {
+                    environment name: 'DEPLOY', value: '0'
+                }
             }
             steps {
                 script {
                     try {
-                        container('maven') {
+                        container('kubectl') {
                             sh 'kubectl apply -f deployment.yaml'
                         }
                     } catch (Exception e) {
@@ -113,25 +120,32 @@ pipeline {
         }
     }
 
+    // post {
+    //     success {
+    //         script {
+    //             // Define wildcard pattern for branch names
+    //             def wildcardPattern = /^(main|master)$|(release|hotfix)-.*/
+
+    //             // Get list of branch names from downstream job
+    //             def allBranches = jenkins.model.Jenkins.instance.getItemByFullName('QA/Content Services QA/Staging/API Postman Tests').getAllJobs().findAll { it instanceof hudson.model.AbstractProject }
+
+    //             // Filter branches using wildcard pattern
+    //             def matchingBranches = allBranches.findAll { branch ->
+    //                 branch.name ==~ wildcardPattern
+    //             }
+
+    //             // Trigger downstream job for matching branches
+    //             matchingBranches.each { matchingBranch ->
+    //                 build job: "${matchingBranch.fullName}", wait: false
+    //             }
+    //         }
+    //     }
+    // }
+
     post {
         success {
-            script {
-                // Define wildcard pattern for branch names
-                def wildcardPattern = /^(main|master)$|(release|hotfix)-.*/
-
-                // Get list of branch names from downstream job
-                def allBranches = jenkins.model.Jenkins.instance.getItemByFullName('QA/Content Services QA/Staging/API Postman Tests').getAllJobs().findAll { it instanceof hudson.model.AbstractProject }
-
-                // Filter branches using wildcard pattern
-                def matchingBranches = allBranches.findAll { branch ->
-                    branch.name ==~ wildcardPattern
-                }
-
-                // Trigger downstream job for matching branches
-                matchingBranches.each { matchingBranch ->
-                    build job: "${matchingBranch.fullName}", wait: false
-                }
-            }
+            // Trigger downstream pipeline
+            build job: 'Content Services/Staging/API/main', result: 'SUCCESS'
         }
     }
 
