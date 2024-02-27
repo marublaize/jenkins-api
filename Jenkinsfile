@@ -12,11 +12,6 @@ pipeline {
                     command:
                     - cat
                     tty: true
-                  - name: kubectl
-                    image: bitnami/kubectl:latest
-                    command:
-                    - cat
-                    tty: true
             """
         }
     }
@@ -109,7 +104,8 @@ pipeline {
             steps {
                 script {
                     try {
-                        container('kubectl') {
+                        container('maven') {
+                            sh 'apt update && apt install -y kubectl'
                             sh 'kubectl apply -f deployment.yaml'
                         }
                     } catch (Exception e) {
