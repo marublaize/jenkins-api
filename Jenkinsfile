@@ -16,10 +16,6 @@ pipeline {
         }
     }
 
-    options {
-        timestamps()
-    }
-
     environment {
         // These variables are mandatory to stay exactly how they are, or else
         // it won't be able to identify the moment to build or promote an image
