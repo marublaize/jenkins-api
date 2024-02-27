@@ -15,6 +15,7 @@ pipeline {
             """
         }
     }
+
     stages {
         stage('Build') {
             steps {
@@ -29,6 +30,7 @@ pipeline {
                 }
             }
         }
+
         stage('Test') {
             steps {
                 script {
@@ -54,6 +56,13 @@ pipeline {
                     }
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            // Trigger downstream job
+            build job: 'QA/Content Services QA/Staging/API Postman Tests/main', wait: false
         }
     }
 }
