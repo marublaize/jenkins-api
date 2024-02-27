@@ -16,8 +16,63 @@ pipeline {
         }
     }
 
+    options {
+        timestamps()
+    }
+
+    environment {
+        // These variables are mandatory to stay exactly how they are, or else
+        // it won't be able to identify the moment to build or promote an image
+        GIT_COMMIT_SHORT = sh (
+            script: 'git rev-parse --short=8 ${GIT_COMMIT}',
+            returnStdout: true
+        ).trim()
+    }
+
     stages {
+        // Sets variables defined by the branch name
+        stage ('Set Environment') {
+            steps {
+                script {
+                    // Set default values
+                    env.DEPLOY = "1"
+                    def envMap = [:]
+
+                    // Production only has tagged commits, not ending in -rc
+                    if (env.TAG_NAME && env.TAG_NAME ==~ /^\d+\.\d+\.\d+$/) {
+                        envMap = [ohEnv           : 'production']
+                    }
+                    // Staging has tagged commits with -rc in the end
+                    else if ((env.TAG_NAME && env.TAG_NAME ==~ /^\d+\.\d+\.\d+-rc.*$/) ||
+                              env.BRANCH_NAME ==~ /^(release|hotfix)-.*/) {
+                        envMap = [ohEnv           : 'staging']
+                    }
+                    // Main goes to platform
+                    else if (env.BRANCH_NAME ==~ /^(main|master)$/) {
+                        envMap = [ohEnv           : 'development']
+                    }
+                    // other branches can compile and test, but no artifact will be created
+                    else {
+                        envMap = [ohEnv: 'test']
+                        env.DEPLOY = "0"
+                    }
+
+                    // Untagged pushes to staging/hotfixes won't deploy
+                    if (env.BRANCH_NAME ==~ /^(release|hotfix)-.*/) {
+                        env.DEPLOY = "0"
+                    }
+
+                    env.ohEnv               = envMap.ohEnv
+                }
+            }
+        }
+
         stage('Build') {
+            when {
+                not {
+                    environment name: 'ohEnv', value: 'production'
+                }
+            }
             steps {
                 script {
                     try {
@@ -32,6 +87,11 @@ pipeline {
         }
 
         stage('Test') {
+            when {
+                not {
+                    environment name: 'ohEnv', value: 'production'
+                }
+            }
             steps {
                 script {
                     try {
@@ -45,6 +105,9 @@ pipeline {
             }
         }
         stage('Deploy') {
+            when {
+               environment name: 'DEPLOY', value: '1'
+            }
             steps {
                 script {
                     try {
@@ -61,8 +124,21 @@ pipeline {
 
     post {
         success {
-            // Trigger downstream job
-            build job: 'QA/Content Services QA/Staging/API Postman Tests/*', wait: false
+            // Define wildcard pattern for branch names
+            def wildcardPattern = ~/main|master|JIRA-\d+|feature-.+|rc-\d+/
+
+            // Get list of branch names from downstream job
+            def allBranches = jenkins.model.Jenkins.instance.getItemByFullName('QA/Content Services QA/Staging/API Postman Tests').getAllJobs().findAll { it instanceof hudson.model.AbstractProject }
+
+            // Filter branches using wildcard pattern
+            def matchingBranches = allBranches.findAll { branch ->
+                branch.name =~ wildcardPattern
+            }
+
+            // Trigger downstream job for matching branches
+            matchingBranches.each { matchingBranch ->
+                build job: "${matchingBranch.fullName}", wait: false
+            }
         }
     }
 }
