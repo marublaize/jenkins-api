@@ -24,21 +24,21 @@ pipeline {
                 }
             }
         }
-        stage('Test') {
-            steps {
-                container('maven') {
-                    // sh 'mvn test'
-                    exit 0
-                }
-            }
-        }
-        stage('Deploy') {
-            steps {
-                container('maven') {
-                    // sh 'kubectl apply -f deployment.yaml'
-                    exit 0
-                }
-            }
-        }
+        // stage('Test') {
+        //     steps {
+        //         container('maven') {
+        //             // sh 'mvn test'
+        //             exit 0
+        //         }
+        //     }
+        // }
+        // stage('Deploy') {
+        //     steps {
+        //         container('maven') {
+        //             // sh 'kubectl apply -f deployment.yaml'
+        //             exit 0
+        //         }
+        //     }
+        // }
     }
 }
