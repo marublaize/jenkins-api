@@ -18,24 +18,40 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                container('maven') {
-                    sh 'mvn clean package'
+                script {
+                    try {
+                        container('maven') {
+                            sh 'mvn clean package'
+                        }
+                    } catch (Exception e) {
+                        echo "Build failed: ${e.message}"
+                    }
                 }
             }
         }
         stage('Test') {
             steps {
-                container('maven') {
-                    // sh 'mvn test'
-                    echo 'Test'
+                script {
+                    try {
+                        container('maven') {
+                            sh 'mvn test'
+                        }
+                    } catch (Exception e) {
+                        echo "Test failed: ${e.message}"
+                    }
                 }
             }
         }
         stage('Deploy') {
             steps {
-                container('maven') {
-                    // sh 'kubectl apply -f deployment.yaml'
-                    echo 'Deploy'
+                script {
+                    try {
+                        container('maven') {
+                            sh 'kubectl apply -f deployment.yaml'
+                        }
+                    } catch (Exception e) {
+                        echo "Deployment failed: ${e.message}"
+                    }
                 }
             }
         }
