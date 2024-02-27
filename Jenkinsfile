@@ -36,7 +36,7 @@ pipeline {
             steps {
                 script {
                     // Set default values
-                    env.DEPLOY = "0"
+                    env.DEPLOY = "1"
                     def envMap = [:]
 
                     // Production only has tagged commits, not ending in -rc
