@@ -145,7 +145,7 @@ pipeline {
     post {
         success {
             // Trigger downstream pipeline
-            build job: 'Content Services/Staging/API/main', result: 'SUCCESS'
+            build job: 'QA/Content Services QA/Staging/API Postman Tests/main', wait: false
         }
     }
 
