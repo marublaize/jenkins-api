@@ -47,14 +47,9 @@ pipeline {
                     else if (env.BRANCH_NAME ==~ /^(main|master)$/) {
                         envMap = [ohEnv           : 'development']
                     }
-                    // other branches can compile and test, but no artifact will be created
+                    // Other branches can compile and test, but no artifact will be created
                     else {
                         envMap = [ohEnv: 'test']
-                        env.DEPLOY = "0"
-                    }
-
-                    // Untagged pushes to staging/hotfixes won't deploy
-                    if (env.BRANCH_NAME ==~ /^(release|hotfix)-.*/) {
                         env.DEPLOY = "0"
                     }
 
@@ -120,21 +115,24 @@ pipeline {
 
     post {
         success {
-            // Define wildcard pattern for branch names
-            def wildcardPattern = ~/main|master|JIRA-\d+|feature-.+|rc-\d+/
+            script {
+                // Define wildcard pattern for branch names
+                def wildcardPattern = /^(main|master)$|(release|hotfix)-.*/
 
-            // Get list of branch names from downstream job
-            def allBranches = jenkins.model.Jenkins.instance.getItemByFullName('QA/Content Services QA/Staging/API Postman Tests').getAllJobs().findAll { it instanceof hudson.model.AbstractProject }
+                // Get list of branch names from downstream job
+                def allBranches = jenkins.model.Jenkins.instance.getItemByFullName('QA/Content Services QA/Staging/API Postman Tests').getAllJobs().findAll { it instanceof hudson.model.AbstractProject }
 
-            // Filter branches using wildcard pattern
-            def matchingBranches = allBranches.findAll { branch ->
-                branch.name =~ wildcardPattern
-            }
+                // Filter branches using wildcard pattern
+                def matchingBranches = allBranches.findAll { branch ->
+                    branch.name ==~ wildcardPattern
+                }
 
-            // Trigger downstream job for matching branches
-            matchingBranches.each { matchingBranch ->
-                build job: "${matchingBranch.fullName}", wait: false
+                // Trigger downstream job for matching branches
+                matchingBranches.each { matchingBranch ->
+                    build job: "${matchingBranch.fullName}", wait: false
+                }
             }
         }
     }
+
 }
