@@ -23,7 +23,7 @@ pipeline {
             script: 'git rev-parse --short=8 ${GIT_COMMIT}',
             returnStdout: true
         ).trim()
-        KUBECONFIG_CREDENTIAL = credentials('kubeconfig')
+        KUBECONFIG = credentials('kubeconfig')
         ENVIRONMENT = "test"
         DEPLOY = "1"
     }
@@ -100,19 +100,21 @@ pipeline {
             }
             steps {
                 script {
-                    try {
-                        container('maven') {
-                            // Install kubectl
-                            sh 'apt update && apt install -y kubernetes-client'
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                        try {
+                            container('maven') {
+                                // Install kubectl
+                                sh 'apt update && apt install -y kubernetes-client'
 
-                            // Set KUBECONFIG environment variable
-                            sh 'export KUBECONFIG=$KUBECONFIG_FILE'
+                                // Set KUBECONFIG environment variable
+                                sh 'export KUBECONFIG=$KUBECONFIG'
 
-                            // Apply the deployment
-                            sh 'kubectl apply -f deployment.yaml'
+                                // Apply the deployment
+                                sh 'kubectl apply -f deployment.yaml'
+                            }
+                        } catch (Exception e) {
+                            echo "Deployment failed: ${e.message}"
                         }
-                    } catch (Exception e) {
-                        echo "Deployment failed: ${e.message}"
                     }
                 }
             }
