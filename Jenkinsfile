@@ -24,6 +24,8 @@ pipeline {
             returnStdout: true
         ).trim()
         KUBECONFIG_CREDENTIAL = credentials('kubeconfig')
+        ENVIRONMENT = "test"
+        DEPLOY = "1"
     }
 
     stages {
@@ -31,30 +33,23 @@ pipeline {
         stage ('Set Environment') {
             steps {
                 script {
-                    // Set default values
-                    env.DEPLOY = "1"
-                    def envMap = [:]
-
                     // Production only has tagged commits, not ending in -rc
                     if (env.TAG_NAME && env.TAG_NAME ==~ /^\d+\.\d+\.\d+$/) {
-                        envMap = [ohEnv           : 'production']
+                        ENVIRONMENT = "production"
                     }
                     // Staging has tagged commits with -rc in the end
                     else if ((env.TAG_NAME && env.TAG_NAME ==~ /^\d+\.\d+\.\d+-rc.*$/) ||
                               env.BRANCH_NAME ==~ /^(release|hotfix)-.*/) {
-                        envMap = [ohEnv           : 'staging']
+                        ENVIRONMENT = "staging"
                     }
                     // Main goes to platform
                     else if (env.BRANCH_NAME ==~ /^(main|master)$/) {
-                        envMap = [ohEnv           : 'development']
+                        ENVIRONMENT = "development"
                     }
                     // Other branches can compile and test, but no artifact will be created
                     else {
-                        envMap = [ohEnv: 'test']
-                        env.DEPLOY = "0"
+                        DEPLOY = "0"
                     }
-
-                    env.ohEnv               = envMap.ohEnv
                 }
             }
         }
@@ -62,7 +57,7 @@ pipeline {
         stage('Build') {
             when {
                 not {
-                    environment name: 'ohEnv', value: 'production'
+                    environment name: 'ENVIRONMENT', value: 'production'
                 }
             }
             steps {
@@ -81,7 +76,7 @@ pipeline {
         stage('Test') {
             when {
                 not {
-                    environment name: 'ohEnv', value: 'production'
+                    environment name: 'ENVIRONMENT', value: 'production'
                 }
             }
             steps {
@@ -122,29 +117,7 @@ pipeline {
                 }
             }
         }
-
-
-    // post {
-    //     success {
-    //         script {
-    //             // Define wildcard pattern for branch names
-    //             def wildcardPattern = /^(main|master)$|(release|hotfix)-.*/
-
-    //             // Get list of branch names from downstream job
-    //             def allBranches = jenkins.model.Jenkins.instance.getItemByFullName('QA/Content Services QA/Staging/API Postman Tests').getAllJobs().findAll { it instanceof hudson.model.AbstractProject }
-
-    //             // Filter branches using wildcard pattern
-    //             def matchingBranches = allBranches.findAll { branch ->
-    //                 branch.name ==~ wildcardPattern
-    //             }
-
-    //             // Trigger downstream job for matching branches
-    //             matchingBranches.each { matchingBranch ->
-    //                 build job: "${matchingBranch.fullName}", wait: false
-    //             }
-    //         }
-    //     }
-    // }
+    }
 
     post {
         success {
